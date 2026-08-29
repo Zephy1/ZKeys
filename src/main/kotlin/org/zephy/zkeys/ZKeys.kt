@@ -1,5 +1,6 @@
 package org.zephy.zkeys
 
+import com.google.gson.Gson
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
@@ -183,6 +184,7 @@ object ZKeys {
     )
 
     /** Returns the GLFW keycode for [keyName], or null if unknown. */
+    @JvmStatic
     fun getKeyCode(keyName: String): Int? {
         val data = keyNameToKeyData[keyName]
         if (data == null) {
@@ -193,6 +195,7 @@ object ZKeys {
     }
 
     /** Returns the key name string for a GLFW [keyCode], or "KEY_UNKNOWN". */
+    @JvmStatic
     fun getKeyName(keyCode: Int): String {
         val name = keycodeToKeyName[keyCode]
         if (name == null) {
@@ -203,6 +206,7 @@ object ZKeys {
     }
 
     /** Returns the human-readable display name for a key name string. */
+    @JvmStatic
     fun getKeyNamePrettyName(keyName: String): String {
         if (keyName == "KEY_UNKNOWN") return "Unknown"
         val data = keyNameToKeyData[keyName]
@@ -214,6 +218,7 @@ object ZKeys {
     }
 
     /** Returns the human-readable display name for a GLFW keycode. */
+    @JvmStatic
     fun getKeyCodePrettyName(keyCode: Int): String =
         getKeyNamePrettyName(getKeyName(keyCode))
 
@@ -221,12 +226,19 @@ object ZKeys {
      * Returns [char] shifted (e.g. '1' → '!') when Shift is held,
      * or the character uppercased for letter keys.
      */
+    @JvmStatic
+    fun getModifiedCharacter(char: String): Char? {
+        val firstChar = char.firstOrNull() ?: return null
+        return getModifiedCharacter(firstChar)
+    }
+    @JvmStatic
     fun getModifiedCharacter(char: Char): Char {
         if (!isShiftDown()) return char
         return shiftedCharacters[char] ?: char.uppercaseChar()
     }
 
     /** True while the named key is physically held down. */
+    @JvmStatic
     fun isKeyNameDown(keyName: String): Boolean =
         isKeyCodeDown(getKeyCode(keyName))
 
@@ -234,6 +246,7 @@ object ZKeys {
      * True while [keyCode] is physically held down.
      * Mouse buttons (negative codes) are tested via GLFW mouse button query.
      */
+    @JvmStatic
     fun isKeyCodeDown(keyCode: Int?): Boolean {
         if (keyCode == null) return false
         val window = Minecraft.getInstance().window.handle()
@@ -241,18 +254,26 @@ object ZKeys {
         return state == GLFW.GLFW_PRESS
     }
 
+    @JvmStatic
     fun isModifierKeyName(keyName: String): Boolean = keyName in modifierKeyNames
+    @JvmStatic
     fun isModifierKeyCode(keyCode: Int): Boolean    = keyCode in modifierKeyCodes
 
+    @JvmStatic
     fun isShiftDown(): Boolean = isKeyNameDown("KEY_LSHIFT") || isKeyNameDown("KEY_RSHIFT")
+    @JvmStatic
     fun isCtrlDown():  Boolean = isKeyNameDown("KEY_LCONTROL") || isKeyNameDown("KEY_RCONTROL")
+    @JvmStatic
     fun isAltDown():   Boolean = isKeyNameDown("KEY_LMENU") || isKeyNameDown("KEY_RMENU")
+    @JvmStatic
     fun isEscapeDown(): Boolean = isKeyNameDown("KEY_ESCAPE")
 
-    /**
-     * Returns a formatted string like "Ctrl + Shift + G" for a key combo.
-     * [modifiers] is a [KeyModifiers] instance describing which modifiers apply.
-     */
+    @JvmStatic
+    fun getKeyComboName(keyName: String, modifiersString: String): String {
+        val modifiers = Gson().fromJson(modifiersString, KeyModifiers::class.java)
+        return getKeyComboName(keyName, modifiers)
+    }
+    @JvmStatic
     fun getKeyComboName(keyName: String, modifiers: KeyModifiers): String {
         if (keyName == "KEY_UNKNOWN") return "Unknown"
         return buildList {

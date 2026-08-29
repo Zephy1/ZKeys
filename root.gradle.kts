@@ -1,14 +1,18 @@
 plugins {
-    kotlin("jvm") version "2.3.10" apply false // Don't bump, depends on preprocessor
+    kotlin("jvm") version "2.4.10" apply false
     id("gg.essential.multi-version.root")
 }
 
 preprocess.strictExtraMappings.set(true)
 preprocess {
-    val fabric26_01_02 = createNode("26.1.2-fabric", 26_01_02, "srg")
-    val fabric12111 = createNode("1.21.11-fabric", 12111, "mojang")
-    val fabric12110 = createNode("1.21.10-fabric", 12110, "mojang")
+    val fabric26_02_00 = createNode("26.2-fabric",   26_02_00, null)
+    val fabric26_01_02 = createNode("26.1.2-fabric", 26_01_02, null)
 
-    fabric26_01_02.link(fabric12111)
-    fabric12111.link(fabric12110)
+    fabric26_02_00.link(fabric26_01_02)
+}
+
+subprojects {
+    afterEvaluate {
+        tasks.findByName("preprocessTestCode")?.enabled = false
+    }
 }

@@ -3,21 +3,21 @@
     "id": "zkeys",
     "version": "${version}",
     "name": "ZKeys",
-    "description": "A keyboard & mouse library.",
+    "description": "A mouse & keyboard library.",
     "authors": [
         "Zephy"
     ],
     "contact": {
+        "sources": "https://github.com/Zephy1/ZKeys",
+        "issues": "https://github.com/Zephy1/ZKeys/issues"
     },
-    "license": "LGPL-3.0",
     "environment": "client",
     "entrypoints": {},
     "mixins": [
         "zkeys.mixins.json"
     ],
     "depends": {
-        "fabricloader": ">=0.18.0",
-        "fabric-api": ">=$fabric_api_version",
-        "fabric-language-kotlin": ">=$fabric_kotlin_version"
+        "fabricloader": ">=0.17.0",
+        "fabric-language-kotlin": "*"
     }
 }

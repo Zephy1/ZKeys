@@ -1,7 +1,6 @@
 plugins {
     kotlin("jvm")
     id("maven-publish")
-    id("com.gradleup.shadow")
     id("gg.essential.multi-version")
     id("gg.essential.defaults")
 }
@@ -14,40 +13,30 @@ configurations.all {
     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-serialization-core-jvm")
 }
 
-val embed by configurations.creating
-configurations.getByName("implementation").extendsFrom(embed)
-
 tasks {
-    shadowJar {
-        configurations.set(listOf(embed))
-        exclude("gg/essential/**")
-    }
     withType<net.fabricmc.loom.task.RemapJarTask>().configureEach {
-        dependsOn(shadowJar)
-        inputFile.set(shadowJar.flatMap { it.archiveFile })
+        dependsOn(jar)
+        inputFile.set(jar.flatMap { it.archiveFile })
     }
 
     processResources {
         val version = project.version
-        val fabricApiVersion = project.platform.fabricApiVersion ?: throw IllegalStateException("fabricApiVersion is not set for platform ${project.platform}")
-        val fabricKotlinVersion = project.platform.fabricKotlinVersion ?: throw IllegalStateException("fabricKotlinVersion is not set for platform ${project.platform}")
-
         inputs.property("version", version)
-        inputs.property("fabric_api_version", fabricApiVersion)
-        inputs.property("fabric_kotlin_version", fabricKotlinVersion)
         filesMatching("fabric.mod.json") {
-            expand(
-                "version" to version,
-                "fabric_api_version" to fabricApiVersion,
-                "fabric_kotlin_version" to fabricKotlinVersion,
-            )
+            expand("version" to version)
+        }
+
+        val javaVersion = project.java.toolchain.languageVersion.get().asInt()
+        inputs.property("compatibilityLevel", javaVersion)
+        filesMatching("zkeys.mixins.json") {
+            filter { line -> line.replace("\$compatibilityLevel", "JAVA_${javaVersion}") }
         }
     }
 }
 
 afterEvaluate {
     val hasRemapJar = tasks.findByName("remapJar") != null
-    val outputTaskName = if (hasRemapJar) "remapJar" else "shadowJar"
+    val outputTaskName = if (hasRemapJar) "remapJar" else "jar"
 
     tasks.register<Copy>("collectJars") {
         group = "build"
