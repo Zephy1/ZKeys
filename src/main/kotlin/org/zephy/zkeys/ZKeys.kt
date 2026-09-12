@@ -7,7 +7,7 @@ import net.minecraft.network.chat.Component
 import org.lwjgl.glfw.GLFW
 
 data class KeyData(
-    val glfwKeycode: Int,
+    val keycode: Int,
     val prettyName: String,
 )
 
@@ -28,11 +28,71 @@ fun Int.toModifiers() = KeyModifiers(
 )
 
 object ZKeys {
-    const val MOUSE_KEY_OFFSET = 100
+    init {
+        ClientTickEvents.START_CLIENT_TICK.register {
+            if (!isLeftMouseButtonDown()) {
+                shouldClickLeft = true
+            }
+            if (!isRightMouseButtonDown()) {
+                shouldClickRight = true
+            }
+            if (!isMiddleMouseButtonDown()) {
+                shouldClickMiddle = true
+            }
+        }
+    }
 
+    @JvmField
+    val MOUSE_KEY_OFFSET = 100
+    @JvmField
     val mouseClickedStates: MutableMap<Int, Boolean> = mutableMapOf()
-    var shouldClick: Boolean = true
 
+    @JvmField
+    var shouldClickLeft: Boolean = true
+    @JvmStatic
+    fun getShouldClickLeft(): Boolean = shouldClickLeft
+    @JvmStatic
+    fun setShouldClickLeft(value: Boolean) {
+        shouldClickLeft = value
+    }
+
+    @JvmField
+    var shouldClickRight: Boolean = true
+    @JvmStatic
+    fun getShouldClickRight(): Boolean = shouldClickRight
+    @JvmStatic
+    fun setShouldClickRight(value: Boolean) {
+        shouldClickRight = value
+    }
+
+    @JvmField
+    var shouldClickMiddle: Boolean = true
+    @JvmStatic
+    fun getShouldClickMiddle(): Boolean = shouldClickMiddle
+    @JvmStatic
+    fun setShouldClickMiddle(value: Boolean) {
+        shouldClickMiddle = value
+    }
+
+    @JvmStatic
+    fun getShouldClick(num: Int): Boolean {
+        return when (num) {
+            1 -> shouldClickLeft
+            0 -> shouldClickRight
+            2 -> shouldClickMiddle
+            else -> true
+        }
+    }
+    @JvmStatic
+    fun setShouldClick(num: Int, value: Boolean) {
+        when (num) {
+            1 -> shouldClickLeft = value
+            0 -> shouldClickRight = value
+            2 -> shouldClickMiddle = value
+        }
+    }
+
+    @JvmField
     val keyNameToKeyData: Map<String, KeyData> = mapOf(
         "KEY_UNKNOWN"      to KeyData(GLFW.GLFW_KEY_UNKNOWN,       "Unknown"),
         "KEY_NONE"         to KeyData(GLFW.GLFW_KEY_UNKNOWN,       "None"),
@@ -159,23 +219,27 @@ object ZKeys {
         "MOUSE_9"          to KeyData(8 - MOUSE_KEY_OFFSET,        "Mouse 9"),
     )
 
+    @JvmField
     val keycodeToKeyName: Map<Int, String> = buildMap {
         for ((name, data) in keyNameToKeyData) {
-            put(data.glfwKeycode, name)
+            put(data.keycode, name)
         }
     }
 
+    @JvmField
     val modifierKeyNames: Set<String> = setOf(
         "KEY_LCONTROL", "KEY_RCONTROL",
         "KEY_LSHIFT",   "KEY_RSHIFT",
         "KEY_LMENU",    "KEY_RMENU",
     )
 
+    @JvmField
     val modifierKeyCodes: Set<Int> = modifierKeyNames
-        .mapNotNull { keyNameToKeyData[it]?.glfwKeycode }
+        .mapNotNull { keyNameToKeyData[it]?.keycode }
         .toSet()
 
-    private val shiftedCharacters: Map<Char, Char> = mapOf(
+    @JvmField
+    val shiftedCharacters: Map<Char, Char> = mapOf(
         '1' to '!', '2' to '@', '3' to '#', '4' to '$', '5' to '%',
         '6' to '^', '7' to '&', '8' to '*', '9' to '(', '0' to ')',
         '-' to '_', '=' to '+', '[' to '{', ']' to '}', '\\' to '|',
@@ -191,7 +255,7 @@ object ZKeys {
             sendPrefixedMessage("§cUnknown key with name: §e${keyName}§c.", true)
             return null
         }
-        return data.glfwKeycode
+        return data.keycode
     }
 
     /** Returns the key name string for a GLFW [keyCode], or "KEY_UNKNOWN". */
@@ -249,9 +313,10 @@ object ZKeys {
     @JvmStatic
     fun isKeyCodeDown(keyCode: Int?): Boolean {
         if (keyCode == null) return false
-        val window = Minecraft.getInstance().window.handle()
-        val state = if (keyCode < 20) GLFW.glfwGetMouseButton(window, keyCode) else GLFW.glfwGetKey(window, keyCode)
-        return state == GLFW.GLFW_PRESS
+        if (keyCode < 0) {
+            return isMouseKeyCodeDown(keyCode)
+        }
+        return InputConstants.isKeyDown(keyCode)
     }
 
     @JvmStatic
@@ -299,7 +364,7 @@ object ZKeys {
 
     @JvmStatic
     fun sendPrefixedMessage(message: String, isError: Boolean = false) {
-        val prefix = if (isError) "§7[§aZKeys§7] " else "§c[ZKeys] "
+        val prefix = if (!isError) "§7[§aZKeys§7] " else "§c[ZKeys] "
         sendMessage(Component.literal(prefix + message))
     }
 
@@ -310,21 +375,43 @@ object ZKeys {
         mouseClickedStates[button] = pressed
     }
 
-    init {
-        ClientTickEvents.START_CLIENT_TICK.register {
-            shouldClick = true
-        }
-    }
+    @JvmStatic
+    fun isLeftMouseButtonDown(): Boolean = isMouseKeyCodeDown(keyNameToKeyData["LEFT_MOUSE"]!!.keycode)
+    @JvmStatic
+    fun isRightMouseButtonDown(): Boolean = isMouseKeyCodeDown(keyNameToKeyData["RIGHT_MOUSE"]!!.keycode)
+    @JvmStatic
+    fun isMiddleMouseButtonDown(): Boolean = isMouseKeyCodeDown(keyNameToKeyData["MIDDLE_MOUSE"]!!.keycode)
+
+    @JvmStatic
+    @JvmOverloads
+    fun isLeftMouseButtonClicked(stopClick: Boolean = false, reset: Boolean = false): Boolean =
+        isMouseKeyCodeClicked(keyNameToKeyData["LEFT_MOUSE"]!!.keycode, stopClick, reset)
+    @JvmStatic
+    @JvmOverloads
+    fun isRightMouseButtonClicked(stopClick: Boolean = false, reset: Boolean = false): Boolean =
+        isMouseKeyCodeClicked(keyNameToKeyData["RIGHT_MOUSE"]!!.keycode, stopClick, reset)
+    @JvmStatic
+    @JvmOverloads
+    fun isMiddleMouseButtonClicked(stopClick: Boolean = false, reset: Boolean = false): Boolean =
+        isMouseKeyCodeClicked(keyNameToKeyData["MIDDLE_MOUSE"]!!.keycode, stopClick, reset)
+
+    @JvmStatic
+    fun isMouseKeyCodeDown(keycode: Int): Boolean = isMouseButtonDown(keycode + MOUSE_KEY_OFFSET)
 
     @JvmStatic
     fun isMouseButtonDown(num: Int): Boolean = mouseClickedStates.getOrDefault(num, false)
 
     @JvmStatic
     @JvmOverloads
+    fun isMouseKeyCodeClicked(keycode: Int, stopClick: Boolean = false, reset: Boolean = false): Boolean =
+        isMouseButtonClicked(keycode + MOUSE_KEY_OFFSET, stopClick, reset)
+
+    @JvmStatic
+    @JvmOverloads
     fun isMouseButtonClicked(num: Int, stopClick: Boolean = false, reset: Boolean = false): Boolean {
-        if (isMouseButtonDown(num) && (shouldClick || stopClick)) {
+        if (isMouseButtonDown(num) && (getShouldClick(num) || stopClick)) {
             if (!stopClick && !reset) {
-                shouldClick = false
+                setShouldClick(num, false)
             }
             return true
         }
