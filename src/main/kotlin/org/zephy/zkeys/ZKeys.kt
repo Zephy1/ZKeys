@@ -478,7 +478,7 @@ object ZKeys {
     }
     @JvmStatic
     fun getModifiedCharacter(char: Char): Char {
-        if (!isShiftDown()) return char
+        if (!isShiftDown()) return char.lowercaseChar()
         return shiftedCharacters[char] ?: char.uppercaseChar()
     }
 
